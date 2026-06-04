@@ -1,0 +1,2 @@
+python_interpreter = ".venv/Scripts/python.exe"
+search-path = [".", "api"]
