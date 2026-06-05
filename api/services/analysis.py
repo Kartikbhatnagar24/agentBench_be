@@ -7,11 +7,14 @@ from database import find_many
 
 class AnalysisService:
     def get_overview(self, user_id: str):
-        results = find_many("eval_results", {"user_id": user_id})
+        results = find_many("eval_results", {"user_id": user_id}, order_by="created_at", descending=False)
         sessions = find_many("chat_sessions", {"user_id": user_id})
 
-        session_titles = {
-            str(session.get("id")): session.get("first_message") or "Untitled conversation"
+        session_info = {
+            str(session.get("id")): {
+                "title": session.get("first_message") or "Untitled conversation",
+                "created_at": session.get("created_at") or "",
+            }
             for session in sessions
         }
 
@@ -19,7 +22,7 @@ class AnalysisService:
             "user_id": user_id,
             "summary": self._build_summary(results, len(sessions)),
             "status_breakdown": self._build_status_breakdown(results),
-            "session_breakdown": self._build_session_breakdown(results, session_titles),
+            "session_breakdown": self._build_session_breakdown(results, session_info),
             "weak_queries": self._build_weak_queries(results),
             "recent_metrics": self._build_recent_metrics(results),
         }
@@ -59,7 +62,7 @@ class AnalysisService:
         counts = Counter(str(row.get("status") or "unknown") for row in results)
         return [{"status": status, "count": count} for status, count in counts.items()]
 
-    def _build_session_breakdown(self, results: list[dict[str, Any]], session_titles: dict[str, str]):
+    def _build_session_breakdown(self, results: list[dict[str, Any]], session_info: dict[str, dict[str, Any]]):
         grouped: dict[str, list[dict[str, Any]]] = {}
         for row in results:
             session_id = str(row.get("session_id") or "")
@@ -69,9 +72,13 @@ class AnalysisService:
 
         rows = []
         for session_id, records in grouped.items():
+            meta = session_info.get(session_id) or {}
+            created_at = meta.get("created_at") or ""
+
             rows.append({
                 "session_id": session_id,
-                "title": session_titles.get(session_id, "Untitled conversation"),
+                "title": meta.get("title") or "Untitled conversation",
+                "created_at": created_at,
                 "total_queries": len(records),
                 "avg_faithfulness": self._avg(records, "faithfulness"),
                 "avg_answer_relevancy": self._avg(records, "answer_relevancy"),
@@ -97,9 +104,8 @@ class AnalysisService:
 
         return sorted(
             rows,
-            key=lambda item: (
-                item["avg_faithfulness"] + item["avg_answer_relevancy"] + item["avg_confidence_score"]
-            ) / 3,
+            key=lambda item: item.get("created_at") or "",
+            reverse=True,
         )
 
     def _build_weak_queries(self, results: list[dict[str, Any]]):
