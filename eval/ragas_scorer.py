@@ -90,6 +90,11 @@ async def evaluate_and_save_to_db(
         status = "failed"
         logger.error(f"RAGAS evaluation scoring failed: {e}", exc_info=True)
     try:
+        # Check if query is a broad/summary query
+        question_lower = question.lower() if question else ""
+        summary_keywords = ["explain", "summarize", "what does", "what is in", "contains", "overview", "tell me about"]
+        is_summary = any(kw in question_lower for kw in summary_keywords)
+
         # 2. Package database payload to match 'eval_results' schema
         payload = {
             "message_id": message_id,
@@ -102,7 +107,8 @@ async def evaluate_and_save_to_db(
             "confidence_score": sanitize_float(confidence_score),
             "retry_count": retry_count,
             "latency_ms": latency_ms,
-            "status": status
+            "status": status,
+            "is_summary": is_summary
         }
         
         # 3. Log directly to your Supabase table
