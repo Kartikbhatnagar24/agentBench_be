@@ -1,11 +1,12 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, File, UploadFile, HTTPException, Request, BackgroundTasks, Depends
+from utils.user_validation import get_current_user
 from api.services.upload import AttachmentService
 
 router = APIRouter(prefix="/chat",tags=["chat"])
 service = AttachmentService()
 
 @router.post('/upload')
-async def upload(request: Request, background_tasks: BackgroundTasks, user_id: str, session_id: str, file: UploadFile = File(...)):
+async def upload(request: Request, background_tasks: BackgroundTasks, user_id: str, session_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     """
     Upload and index a plain text (.txt) or PDF (.pdf) document.
 
@@ -20,7 +21,7 @@ async def upload(request: Request, background_tasks: BackgroundTasks, user_id: s
     return await service.upload_document(request, background_tasks, user_id, session_id, file)
 
 @router.get('/documents')
-async def get_documents(user_id: str, session_id: str):
+async def get_documents(user_id: str, session_id: str, current_user: dict = Depends(get_current_user)):
     """
     Retrieve all uploaded and indexed documents for a specific user session.
 
@@ -38,7 +39,7 @@ async def get_documents(user_id: str, session_id: str):
     return service.get_documents(user_id, session_id)
 
 @router.delete('/documents/{doc_id}')
-async def delete_document(request: Request, doc_id: str, user_id: str, session_id: str):
+async def delete_document(request: Request, doc_id: str, user_id: str, session_id: str, current_user: dict = Depends(get_current_user)):
     """
     Delete an indexed document from RAG storage.
 

@@ -1,7 +1,7 @@
 from utils.eval import get_state_val
 from typing import Optional
 from database import logger
-from utils.chat import build_and_foramt_history
+from utils.chat import build_and_format_history
 from rag_pipeline.llm import get_llm
 from fastapi import WebSocket
 from database import delete_one
@@ -81,7 +81,7 @@ class ChatSessionService:
         return find_one("chat_sessions",{"id":session_id})
     
     def _initialize_pipeline_state(self, user_message: str, session: Optional[dict], session_id: str) -> PipelineState:
-        formatted_history = build_and_foramt_history(session)
+        formatted_history = build_and_format_history(session)
         return PipelineState(
             original_query=user_message,
             chat_history=formatted_history,

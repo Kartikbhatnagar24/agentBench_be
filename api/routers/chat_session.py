@@ -2,7 +2,8 @@
 from database import logger
 from api.models.chat_session import ChatSession
 from api.services.chat_session import ChatSessionService
-from fastapi import APIRouter, WebSocket, Request,WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, Request, WebSocketDisconnect, Depends
+from utils.user_validation import get_current_user
 
 
 
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/chat",tags=["chat"])
 chat_session_service=ChatSessionService()
 
 @router.post("/create-session")
-async def create_session(session:ChatSession):
+async def create_session(session:ChatSession, current_user: dict = Depends(get_current_user)):
     """
     Create a new chat session thread.
 
@@ -36,7 +37,7 @@ async def create_session(session:ChatSession):
     return chat_session_service.create_chat_session(session)
 
 @router.get("/sessions")
-async def get_sessions(user_id: str):
+async def get_sessions(user_id: str, current_user: dict = Depends(get_current_user)):
     """
     Get all chat sessions for a specific user.
 
@@ -66,6 +67,17 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
     """
     WebSocket endpoint for real-time RAG chat streaming.
     """
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001)
+        return
+    try:
+        from utils.user_validation import verify_token
+        verify_token(token)
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
     await websocket.accept()
     try:
         while True:
@@ -84,7 +96,7 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
     
 
 @router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str, user_id: str, request: Request):
+async def delete_session(session_id: str, user_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """
     Delete a chat session by ID. Also purges Qdrant vectors and Supabase
     storage files belonging to this session. All steps must succeed.

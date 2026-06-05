@@ -17,3 +17,4 @@ langchain-qdrant
 pymupdf
 langchain-google-genai
 langsmith
+pyjwt

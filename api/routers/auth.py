@@ -1,6 +1,7 @@
 from api.services.auth import AuthService
-from api.models.auth import SignUp,SignIn
-from fastapi import APIRouter
+from api.models.auth import SignUp, SignIn, ResetPassword
+from fastapi import APIRouter, Depends
+from utils.user_validation import get_current_user
 
 router=APIRouter(prefix="/auth",tags=["Auth"])
 
@@ -39,7 +40,7 @@ async def signin(body:SignIn):
     return auth_service.login(data=body)
 
 @router.get("/user-details")
-async def get_user_details(email: str):
+async def get_user_details(email: str, current_user: dict = Depends(get_current_user)):
     """
     Retrieve database profile details for a given email.
 
@@ -53,3 +54,10 @@ async def get_user_details(email: str):
     }
     """
     return auth_service.get_user_details(email=email)
+
+@router.post("/reset-password")
+async def reset_password(body: ResetPassword):
+    """
+    Directly update a user's password in the database (stateless/unauthenticated).
+    """
+    return auth_service.reset_password(data=body)

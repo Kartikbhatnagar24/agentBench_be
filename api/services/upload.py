@@ -77,7 +77,6 @@ class AttachmentService:
             "filename": file.filename,
             "path": storage_path,
             "chunk_count": len(chunks),
-            "content": text[:5000] if text else "",
         }
 
     def get_documents(self, user_id: str, session_id: str):

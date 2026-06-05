@@ -9,4 +9,8 @@ class SignUp(BaseModel):
 class SignIn(BaseModel):
     email:str 
     password:str
+
+class ResetPassword(BaseModel):
+    email: str
+    new_password: str
     

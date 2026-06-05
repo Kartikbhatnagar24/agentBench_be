@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.messages import BaseMessage
 
-def build_and_foramt_history(session: dict | None) -> str:
+def build_and_format_history(session: dict | None) -> str:
     history: list[BaseMessage] = []
     if session:
         # Get only the last 5 messages to avoid overly long contexts
