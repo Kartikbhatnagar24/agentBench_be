@@ -5,10 +5,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 # Use a default secret key for local development, but recommend environment override
-JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-for-rag-project")
-JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+JWT_SECRET = os.getenv("JWT_SECRET", "default_secret_key_change_me")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 security = HTTPBearer(auto_error=False)
 

@@ -5,17 +5,26 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
+_embeddings_instance = None
+
 def embedding_model():
     """
     This function is used to load the embedding model from the HuggingFace Hub.
     """
-    hf_token = os.getenv("HF_TOKEN")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"token":hf_token},
-        show_progress=True,
-    )
-    return embeddings
+    global _embeddings_instance
+    if _embeddings_instance is None:
+        hf_token = os.getenv("HF_TOKEN")
+        _embeddings_instance = HuggingFaceEmbeddings(
+            model_name="BAAI/bge-small-en-v1.5",
+            model_kwargs={"token": hf_token},
+            encode_kwargs={"normalize_embeddings": True},
+            query_encode_kwargs={
+                "prompt": "Represent this sentence for searching relevant passages: ",
+                "normalize_embeddings": True,
+            },
+            show_progress=True,
+        )
+    return _embeddings_instance
 
 def chunking_sementic(text:str):
     embeddings = embedding_model()
@@ -27,7 +36,7 @@ def chunking_sementic(text:str):
         docs = splitter.create_documents([text])
         
         # Guard: Split any semantic chunk that exceeds 1200 characters to prevent
-        # context truncation in all-MiniLM-L6-v2 (which has a 512-token limit).
+        # context truncation in BAAI/bge-small-en-v1.5 (which has a 512-token limit).
         sub_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1200,
             chunk_overlap=200,

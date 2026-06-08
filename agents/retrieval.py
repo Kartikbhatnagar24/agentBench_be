@@ -5,6 +5,7 @@ from utils.retry_agent import retry_llm_invoke
 from rag_pipeline.llm import get_llm
 from agents.prompts import rewrite_prompt
 from rag_pipeline.qdrant import asearch_by_session_with_score
+from rag_pipeline.ranker import ranker
 
 llm = get_llm()
 
@@ -12,6 +13,11 @@ def make_retrieval_agent(vectorstore):
     """Factory that binds `vectorstore` into the node closure."""
 
     async def retrieval_agent(state: PipelineState) -> PipelineState:
+        # Detect if we're running against the RAGbench eval collection.
+        # RAGbench chunk IDs are sequential integers scoped per-document, so they
+        # are NOT globally unique. We need a composite key to deduplicate them.
+        # In production, chunk IDs are UUIDs and are globally unique on their own.
+        is_ragbench = getattr(vectorstore, "collection_name", "") == "ragbench_eval"
         # Step 0: Identify failed claims from previous attempts to build feedback
         failed_claims = [c for c in state.verified_claims if not c["supported"]]
         
@@ -63,22 +69,41 @@ def make_retrieval_agent(vectorstore):
         if state.retrieved_chunks:
             for chunk in state.retrieved_chunks:
                 cid = chunk.get("chunk_id")
-                if cid not in seen_ids:
-                    seen_ids.add(cid)
+                if is_ragbench:
+                    metadata = chunk.get("metadata") or {}
+                    doc_identifier = metadata.get("filename") or metadata.get("document_id") or metadata.get("file_id") or "Unknown"
+                    unique_id = f"{doc_identifier}_{cid}"
+                else:
+                    unique_id = str(cid)
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
                     all_chunks.append(chunk)
 
         for query in state.rewritten_queries:
-            chunks = await asearch_by_session_with_score(vectorstore, query, state.session_id, k=5)
+            chunks = await asearch_by_session_with_score(vectorstore, query, state.session_id, k=8)
             for chunk, score in chunks:
                 chunk_id = chunk.metadata.get("chunk_id")
-                if chunk_id not in seen_ids:
-                    seen_ids.add(chunk_id)
+                if is_ragbench:
+                    doc_identifier = chunk.metadata.get("filename") or chunk.metadata.get("document_id") or chunk.metadata.get("file_id") or "Unknown"
+                    unique_id = f"{doc_identifier}_{chunk_id}"
+                else:
+                    unique_id = str(chunk_id)
+
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
                     all_chunks.append({
                         "text": chunk.page_content,
                         "metadata": chunk.metadata,
                         "score": float(score),
                         "chunk_id": chunk_id,
                     })
+        if all_chunks:
+            pairs = [[state.original_query, chunk["text"]] for chunk in all_chunks]
+            ranking_results = ranker.invoke(pairs)
+            
+            # Attach scores back to chunks
+            for i, (original_query, chunk_text) in enumerate(pairs):
+                all_chunks[i]["score"] = ranking_results[i]
 
         # Step 3: rank by score, keep top 8 to allow a richer context on retries
         state.retrieved_chunks = sorted(all_chunks, key=lambda x: x["score"], reverse=True)[:8]

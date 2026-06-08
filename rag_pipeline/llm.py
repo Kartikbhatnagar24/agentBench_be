@@ -29,6 +29,7 @@ class ChatOpenAIGroqSafe(ChatOpenAI):
             n = max(n, self.n)
         
         if n <= 1:
+            kwargs["n"] = 1
             return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
         
         original_n = getattr(self, "n", None)
@@ -37,6 +38,7 @@ class ChatOpenAIGroqSafe(ChatOpenAI):
             generations = []
             llm_output = None
             for _ in range(n):
+                kwargs["n"] = 1
                 res = super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 generations.extend(res.generations)
                 llm_output = res.llm_output
@@ -53,6 +55,7 @@ class ChatOpenAIGroqSafe(ChatOpenAI):
             n = max(n, self.n)
         
         if n <= 1:
+            kwargs["n"] = 1
             return await super()._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
         
         original_n = getattr(self, "n", None)
@@ -61,6 +64,7 @@ class ChatOpenAIGroqSafe(ChatOpenAI):
             generations = []
             llm_output = None
             for _ in range(n):
+                kwargs["n"] = 1
                 res = await super()._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 generations.extend(res.generations)
                 llm_output = res.llm_output

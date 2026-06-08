@@ -13,8 +13,8 @@ load_dotenv()
 qdrant_client: Optional[QdrantClient] = None
 vectorstore: Optional[QdrantVectorStore] = None
 
-COLLECTION_NAME = "agentbench_docs"
-VECTOR_SIZE = 384  # all-MiniLM-L6-v2
+COLLECTION_NAME = "agentbench_docs_bge"
+VECTOR_SIZE = 384  # BAAI/bge-small-en-v1.5
 
 
 def _index_chunks(vectorstore, chunks: list) -> None:

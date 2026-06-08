@@ -18,3 +18,4 @@ pymupdf
 langchain-google-genai
 langsmith
 pyjwt
+ragas

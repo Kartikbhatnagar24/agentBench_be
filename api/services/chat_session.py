@@ -2,7 +2,6 @@ from utils.eval import get_state_val
 from typing import Optional
 from database import logger
 from utils.chat import build_and_format_history
-from rag_pipeline.llm import get_llm
 from fastapi import WebSocket
 from database import delete_one
 from database import insert_one, find_many, find_one, update_one
@@ -11,7 +10,6 @@ from api.models.chat_session import ChatSession
 from fastapi import HTTPException
 import uuid
 import asyncio
-from rag_pipeline.qdrant import search_by_session
 from agents.graph.graph import build_graph
 from agents.models.pipeline import PipelineState
 
@@ -192,8 +190,6 @@ class ChatSessionService:
         )
 
     async def websocket_streaming(self, websocket: WebSocket, session_id: str):
-        llm = get_llm(streaming=True)
-    
         # Wait for user message
         user_message = await websocket.receive_text()
         start_time = datetime.now()
